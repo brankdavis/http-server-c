@@ -17,7 +17,7 @@ int main() {
 
 	// Uncomment this block to pass the first stage
 	//
-	int server_fd, client_addr_len;
+	int server_fd, client_addr_len, client_fd;
 	struct sockaddr_in client_addr;
 	//
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -38,12 +38,13 @@ int main() {
 									 .sin_port = htons(4221),
 									 .sin_addr = { htonl(INADDR_ANY) },
 									};
-	
+	// binding to the socket
 	if (bind(server_fd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) != 0) {
 		printf("Bind failed: %s \n", strerror(errno));
 		return 1;
 	}
 	
+	// listen for connection requests , 5 conection requests ALLOWED
 	int connection_backlog = 5;
 	if (listen(server_fd, connection_backlog) != 0) {
 		printf("Listen failed: %s \n", strerror(errno));
@@ -53,8 +54,16 @@ int main() {
 	printf("Waiting for a client to connect...\n");
 	client_addr_len = sizeof(client_addr);
 	
-	accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len);
+	// accept client requests
+	if( (client_fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len)) < 0 ) {
+		printf("Request/Connection error: %s \n", strerror(errno));
+		return 1;
+	}
 	printf("Client connected\n");
+
+	// send http/1.1 200 response to client
+	char *response = "HTTP/1.1 200 OK\r\n\r\n";
+	send(client_fd, response, strlen(response), 0);
 	
 	close(server_fd);
 
