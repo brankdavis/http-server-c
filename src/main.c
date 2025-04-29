@@ -7,6 +7,9 @@
 #include <errno.h>
 #include <unistd.h>
 
+// #define DEBUG
+
+
 int main() {
 	// Disable output buffering
 	setbuf(stdout, NULL);
@@ -17,8 +20,9 @@ int main() {
 
 	// Uncomment this block to pass the first stage
 	//
-	int server_fd, client_addr_len, client_fd;
+	int server_fd, client_addr_len, client_fd, bytes_read;
 	struct sockaddr_in client_addr;
+	char buf[BUFSIZ];
 	//
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd == -1) {
@@ -54,17 +58,41 @@ int main() {
 	printf("Waiting for a client to connect...\n");
 	client_addr_len = sizeof(client_addr);
 	
-	// accept client requests
+	// accept
 	if( (client_fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len)) < 0 ) {
 		printf("Request/Connection error: %s \n", strerror(errno));
 		return 1;
 	}
 	printf("Client connected\n");
 
-	// send http/1.1 200 response to client
+	//extract
+	if ((bytes_read = read(client_fd, buf, BUFSIZ-1)) < 0 ) {
+		printf("Socket Read Error: %s \n", strerror(errno));
+	}
+
+	printf("bytes read: %d \n", bytes_read);
+	//fwrite(buf, bytes_read, bytes_read,stdout);
+
+	printf("%s\n", buf);
+
+	int i;
+	for (i = 0; buf[i] != '/'; i++) {
+		#ifdef DEBUG
+			printf("%c\n", buf[i]);
+		#endif
+	}
+	
+	// only handle '/' request path
+	if (buf[i+1] != ' '){
+		char *response = "HTTP/1.1 404 Not Found\r\n\r\n";
+		send(client_fd, response, strlen(response), 0);
+		close(server_fd);
+		return 0;
+	}
+
+	// respond
 	char *response = "HTTP/1.1 200 OK\r\n\r\n";
 	send(client_fd, response, strlen(response), 0);
-	
 	close(server_fd);
 
 	return 0;
