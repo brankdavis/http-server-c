@@ -127,13 +127,7 @@ int main() {
 		printf("\n ### DEBUG ###: Content Lengh: %d\n", content_length);
 	#endif
 
-
-
-	// todo: Figure out how to build response
-	//char *response_ptr;
 	char response[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
-	char body = "Content-Length: %d\r\n\r\nabc";
-
 
 	int contentLengthStrSize = strlen("Content-Length: " + content_length);
 	char contentLengthBuf[50];
