@@ -86,8 +86,6 @@ int main() {
 	char extracted_url_path_buff[100] = "";
 	int extracted_path_buff_index = 0;
 	int content_length = 0;
-	char req_str_buff[20] = "";
-	int req_str_iterator = 0;
 	int res;
 	
 	/** GET /echo/abc HTTP/1.1\r\nHost: localhost:4221\r\nUser-Agent: curl/7.64.1\r\nAccept: */
@@ -108,18 +106,23 @@ int main() {
 		#endif
 
 		extracted_url_path_buff[extracted_path_buff_index++] = *buff_ptr;
+		content_length++;
 	}
 
 	#ifdef DEBUG_EXTRACTED_URL
 		printf("\n ### DEBUG ###: url buff : %s\n", extracted_url_path_buff);
 	#endif
 
-	if ( (res = strcmp(expected_url_path, extracted_url_path_buff) != 0) ) {
+	if ( (res = strcmp(expected_url_path, extracted_url_path_buff) != 0) ) 
+	{
 		char response[30] = "HTTP/1.1 404 Not Found\r\n\r\n";
 		send(client_fd, response, strlen(response), 0);
 		close(server_fd);
 	}
 	else {
+
+		char req_str_buff[20] = "";
+		int req_str_iterator = 0;
 
 		for (; *buff_ptr != ' '; buff_ptr++) {
 		if (*buff_ptr != '/') {
