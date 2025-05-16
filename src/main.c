@@ -7,7 +7,16 @@
 #include <errno.h>
 #include <unistd.h>
 
-// #define DEBUG
+//#define DEBUG_
+//#define DEBUG_URL
+#define TEST
+#define PROD
+
+
+int
+calculate_content_length(int intitial_content_length, char *url_path) {
+	return intitial_content_length - strlen(url_path);
+}
 
 
 int main() {
@@ -15,11 +24,6 @@ int main() {
 	setbuf(stdout, NULL);
  	setbuf(stderr, NULL);
 
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
-	printf("Logs from your program will appear here!\n");
-
-	// Uncomment this block to pass the first stage
-	//
 	int server_fd, client_addr_len, client_fd, bytes_read;
 	struct sockaddr_in client_addr;
 	char buf[BUFSIZ];
@@ -73,25 +77,90 @@ int main() {
 	printf("bytes read: %d \n", bytes_read);
 	//fwrite(buf, bytes_read, bytes_read,stdout);
 
-	printf("%s\n", buf);
+	//printf("%s\n", buf);
+	// Get request Line
 
-	int i;
-	for (i = 0; buf[i] != '/'; i++) {
+	char *url_path = "echo"; // 4
+	char *buff_ptr = buf;
+	int content_length = 0;
+	char req_str_buff[20] = "";
+	int req_str_iterator = 0;	// move ptr to start of url string
+	/** GET /echo/abc HTTP/1.1\r\nHost: localhost:4221\r\nUser-Agent: curl/7.64.1\r\nAccept: */
+
+	printf("printing....\n");
+	for(; *buff_ptr != '/'; buff_ptr++){
 		#ifdef DEBUG
-			printf("%c\n", buf[i]);
+			printf("%c", *buff_ptr);
 		#endif
 	}
-	
-	// only handle '/' request path
-	if (buf[i+1] != ' '){
-		char *response = "HTTP/1.1 404 Not Found\r\n\r\n";
-		send(client_fd, response, strlen(response), 0);
-		close(server_fd);
-		return 0;
+
+	// extract url path
+	for (; *buff_ptr != ' '; buff_ptr++) {
+		if (*buff_ptr != '/') {
+
+			#ifdef DEBUG_URL
+				printf("%c", *buff_ptr);
+				printf("\n");
+			#endif
+			content_length++;
+		}
+
+		if (content_length > 4) {
+			#ifdef DEBUG_URL
+				printf("### content_len > 4\n");
+				printf("%c", *buff_ptr);
+				printf("\n");
+			#endif
+
+			req_str_buff[req_str_iterator++] = *buff_ptr;
+		}
 	}
 
-	// respond
-	char *response = "HTTP/1.1 200 OK\r\n\r\n";
+
+	#ifdef DEBUG_URL
+		printf("\n ### DEBUG ###: requ str buff : %s\n", req_str_buff);
+	#endif
+
+	content_length = calculate_content_length(content_length, url_path);
+
+	#ifdef DEBUG_URL
+		printf("\n ### DEBUG ###: Content Lengh: %d\n", content_length);
+	#endif
+
+
+
+	// todo: Figure out how to build response
+	//char *response_ptr;
+	char response[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
+	char body = "Content-Length: %d\r\n\r\nabc";
+
+
+	int contentLengthStrSize = strlen("Content-Length: " + content_length);
+	char contentLengthBuf[50];
+	char *contentLengthBuf_ptr = contentLengthBuf;
+	int trunc;
+	
+
+	#ifdef DEBUG_URL
+		printf("\n  ### DEBUG ### Content Lengh Size: %d\n", contentLengthStrSize);
+	#endif
+
+	if ( (trunc=snprintf(contentLengthBuf, 50, "Content-Length: %d\r\n\r\n", content_length)) < 0 ) {
+		printf("Error converting string: %s \n", strerror(errno));
+	}
+
+	#ifdef DEBUG_URL
+		printf("### DEBUG ### sprintf returned value (trunc): %d\n", trunc);
+		printf("### DEBUG ### content length buffer: %s\n",contentLengthBuf);
+	#endif
+
+	strcat(contentLengthBuf, req_str_buff);
+	strcat(response, contentLengthBuf);
+
+	#ifdef DEBUG_URL
+		printf("\n  ### DEBUG ### final response: %s\n", response);
+	#endif
+	
 	send(client_fd, response, strlen(response), 0);
 	close(server_fd);
 
