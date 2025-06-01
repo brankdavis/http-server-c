@@ -7,9 +7,9 @@
 #include <errno.h>
 #include <unistd.h>
 
-// #define DEBUG_
+// #define DEBUG
 // #define DEBUG_URL
-// #define DEBUG_EXTRACTED_URL
+#define DEBUG_EXTRACTED_URL
 #define TEST
 #define PROD
 
@@ -17,10 +17,41 @@
 char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\n\r\n";
 char SUCCESS_RESPONSETYPE_w_CONTENT_[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
 
+// char *expected_url_path = "echo"; // 4
+// //char *buff_ptr;
+// char extracted_url_path_buff[100] = "";
+// int extracted_path_buff_index = 0;
+// int content_length = 0;
+// int res;
+
 int
-calculate_content_length(int intitial_content_length, char *expected_url_path) {
+calculate_content_length(int intitial_content_length, char *expected_url_path) 
+{
 	return intitial_content_length - strlen(expected_url_path);
 }
+
+// void
+// move_to_start_of_path(char *buff) 
+// {
+// 	printf("BUFF STARTS WITH %c\n", buff[0]);
+// 	for(; *buff != '/'; buff++){
+// 		#ifdef DEBUG_EXTRACTED_URL
+// 			//printf("BUFF STARTS WITH %c", buff[0]);
+// 		#endif
+// 	}
+// 	printf("BUFF AFTER LOOP %c\n", *buff);
+// }
+
+// void
+// extract_url_path(char *buff) 
+// {
+// 	printf("extracting url path....\n");
+// 	for(; *buff != '/'; buff++){
+// 			extracted_url_path_buff[extracted_path_buff_index++] = *buff;
+// 			content_length++;
+// 		}
+
+// }
 
 
 int main() {
@@ -81,7 +112,7 @@ int main() {
 	printf("bytes read: %d \n", bytes_read);
 	//fwrite(buf, bytes_read, bytes_read,stdout);
 
-
+	//*buff_ptr = buf;
 
 
 	char *expected_url_path = "echo"; // 4
@@ -93,17 +124,24 @@ int main() {
 	
 	/** GET /echo/abc HTTP/1.1\r\nHost: localhost:4221\r\nUser-Agent: curl/7.64.1\r\nAccept: */
 
-	//printf("printing....\n");
+	printf("printing....\n");
 	for(; *buff_ptr != '/'; buff_ptr++){
 		#ifdef DEBUG
 			printf("%c", *buff_ptr);
 		#endif
 	}
 
+	// move_to_start_of_path(buff_ptr);
+
 	buff_ptr++;
+
+	printf("buff after increment: %c\n", *buff_ptr);
+	printf("extracted buff: %s\n", extracted_url_path_buff);
 
 	if ( *buff_ptr == ' ' ) 
 	{
+		printf("EMPTY REAQUESTSTRING %c\n", *buff_ptr);
+
 		send(client_fd, SUCCESS_RESPONSE, strlen(SUCCESS_RESPONSE), 0);
 		close(server_fd);
 	} 
@@ -119,6 +157,8 @@ int main() {
 			extracted_url_path_buff[extracted_path_buff_index++] = *buff_ptr;
 			content_length++;
 		}
+
+		//extract_url_path(buff_ptr);
 
 		#ifdef DEBUG_EXTRACTED_URL
 			printf("\n ### DEBUG ###: url buff : %s\n", extracted_url_path_buff);
