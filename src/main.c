@@ -14,6 +14,8 @@
 #define PROD
 
 
+char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
+
 int
 calculate_content_length(int intitial_content_length, char *expected_url_path) {
 	return intitial_content_length - strlen(expected_url_path);
@@ -98,97 +100,109 @@ int main() {
 	}
 
 	buff_ptr++;
-	
-	// extract url path
-	for(; *buff_ptr != '/'; buff_ptr++){
-		#ifdef DEBUG
-			printf("%c", *buff_ptr);
-		#endif
 
-		extracted_url_path_buff[extracted_path_buff_index++] = *buff_ptr;
-		content_length++;
-	}
-
-	#ifdef DEBUG_EXTRACTED_URL
-		printf("\n ### DEBUG ###: url buff : %s\n", extracted_url_path_buff);
-	#endif
-
-	if ( (res = strcmp(expected_url_path, extracted_url_path_buff) != 0) ) 
+	if ( *buff_ptr == ' ' ) 
 	{
-		char response[30] = "HTTP/1.1 404 Not Found\r\n\r\n";
-		send(client_fd, response, strlen(response), 0);
+		send(client_fd, SUCCESS_RESPONSE, strlen(SUCCESS_RESPONSE), 0);
 		close(server_fd);
-	}
-	else {
+	} 
+	else 
+	{
 
-		// URL path is valid now get the request string
+		// extract url path
+		for(; *buff_ptr != '/'; buff_ptr++){
+			#ifdef DEBUG
+				printf("%c", *buff_ptr);
+			#endif
 
-		char req_str_buff[20] = "";
-		int req_str_iterator = 0;
-
-		for (; *buff_ptr != ' '; buff_ptr++) {
-			if (*buff_ptr != '/') {
-
-				#ifdef DEBUG_URL
-					printf("%c", *buff_ptr);
-					printf("\n");
-				#endif
-				content_length++;
-			}
-
-			if (content_length > 4) {
-				#ifdef DEBUG_URL
-					printf("### content_len > 4\n");
-					printf("%c", *buff_ptr);
-					printf("\n");
-				#endif
-
-				req_str_buff[req_str_iterator++] = *buff_ptr;
-			}
+			extracted_url_path_buff[extracted_path_buff_index++] = *buff_ptr;
+			content_length++;
 		}
 
-
-		#ifdef DEBUG_URL
-			printf("\n ### DEBUG ###: requ str buff : %s\n", req_str_buff);
+		#ifdef DEBUG_EXTRACTED_URL
+			printf("\n ### DEBUG ###: url buff : %s\n", extracted_url_path_buff);
 		#endif
 
-		content_length = calculate_content_length(content_length, expected_url_path);
-
-		#ifdef DEBUG_URL
-			printf("\n ### DEBUG ###: Content Lengh: %d\n", content_length);
-		#endif
-
-		char response[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
-
-		int contentLengthStrSize = strlen("Content-Length: " + content_length);
-		char contentLengthBuf[50];
-		char *contentLengthBuf_ptr = contentLengthBuf;
-		int trunc;
-		
-
-		#ifdef DEBUG_URL
-			printf("\n  ### DEBUG ### Content Lengh Size: %d\n", contentLengthStrSize);
-		#endif
-
-		if ( (trunc=snprintf(contentLengthBuf, 50, "Content-Length: %d\r\n\r\n", content_length)) < 0 ) {
-			printf("Error converting string: %s \n", strerror(errno));
+		if ( (res = strcmp(expected_url_path, extracted_url_path_buff) != 0) ) 
+		{
+			char NOT_FOUND_RESPONSE[30] = "HTTP/1.1 404 Not Found\r\n\r\n";
+			send(client_fd, NOT_FOUND_RESPONSE, strlen(NOT_FOUND_RESPONSE), 0);
+			close(server_fd);
 		}
+		else {
 
-		#ifdef DEBUG_URL
-			printf("### DEBUG ### sprintf returned value (trunc): %d\n", trunc);
-			printf("### DEBUG ### content length buffer: %s\n",contentLengthBuf);
-		#endif
+			// URL path is valid now get the request string
 
-		strcat(contentLengthBuf, req_str_buff);
-		strcat(response, contentLengthBuf);
+			char req_str_buff[20] = "";
+			int req_str_iterator = 0;
 
-		#ifdef DEBUG_URL
-			printf("\n  ### DEBUG ### final response: %s\n", response);
-		#endif
-		
-		send(client_fd, response, strlen(response), 0);
-		close(server_fd);
+			for (; *buff_ptr != ' '; buff_ptr++) {
+				if (*buff_ptr != '/') {
+
+					#ifdef DEBUG_URL
+						printf("%c", *buff_ptr);
+						printf("\n");
+					#endif
+					content_length++;
+				}
+
+				if (content_length > 4) {
+					#ifdef DEBUG_URL
+						printf("### content_len > 4\n");
+						printf("%c", *buff_ptr);
+						printf("\n");
+					#endif
+
+					req_str_buff[req_str_iterator++] = *buff_ptr;
+				}
+			}
+
+
+			#ifdef DEBUG_URL
+				printf("\n ### DEBUG ###: requ str buff : %s\n", req_str_buff);
+			#endif
+
+			content_length = calculate_content_length(content_length, expected_url_path);
+
+			#ifdef DEBUG_URL
+				printf("\n ### DEBUG ###: Content Lengh: %d\n", content_length);
+			#endif
+
+			//char response[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
+
+			int contentLengthStrSize = strlen("Content-Length: " + content_length);
+			char contentLengthBuf[50];
+			char *contentLengthBuf_ptr = contentLengthBuf;
+			int trunc;
+			
+
+			#ifdef DEBUG_URL
+				printf("\n  ### DEBUG ### Content Lengh Size: %d\n", contentLengthStrSize);
+			#endif
+
+			if ( (trunc=snprintf(contentLengthBuf, 50, "Content-Length: %d\r\n\r\n", content_length)) < 0 ) {
+				printf("Error converting string: %s \n", strerror(errno));
+			}
+
+			#ifdef DEBUG_URL
+				printf("### DEBUG ### sprintf returned value (trunc): %d\n", trunc);
+				printf("### DEBUG ### content length buffer: %s\n",contentLengthBuf);
+			#endif
+
+			strcat(contentLengthBuf, req_str_buff);
+			strcat(SUCCESS_RESPONSE, contentLengthBuf);
+
+			#ifdef DEBUG_URL
+				printf("\n  ### DEBUG ### final SUCCESS_RESPONSE: %s\n", SUCCESS_RESPONSE);
+			#endif
+			
+			send(client_fd, SUCCESS_RESPONSE, strlen(SUCCESS_RESPONSE), 0);
+			close(server_fd);
+		}
+	
+
 	}
+	
 	
 	
 
