@@ -14,7 +14,7 @@
 #define PROD
 
 
-char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\n";
+char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\n\r\n";
 char SUCCESS_RESPONSETYPE_w_CONTENT_[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
 
 int
