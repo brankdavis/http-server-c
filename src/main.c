@@ -78,8 +78,8 @@ int main() {
 	printf("bytes read: %d \n", bytes_read);
 	//fwrite(buf, bytes_read, bytes_read,stdout);
 
-	//printf("%s\n", buf);
-	// Get request Line
+
+
 
 	char *expected_url_path = "echo"; // 4
 	char *buff_ptr = buf;
@@ -121,28 +121,30 @@ int main() {
 	}
 	else {
 
+		// URL path is valid now get the request string
+
 		char req_str_buff[20] = "";
 		int req_str_iterator = 0;
 
 		for (; *buff_ptr != ' '; buff_ptr++) {
-		if (*buff_ptr != '/') {
+			if (*buff_ptr != '/') {
 
-			#ifdef DEBUG_URL
-				printf("%c", *buff_ptr);
-				printf("\n");
-			#endif
-			content_length++;
-		}
+				#ifdef DEBUG_URL
+					printf("%c", *buff_ptr);
+					printf("\n");
+				#endif
+				content_length++;
+			}
 
-		if (content_length > 4) {
-			#ifdef DEBUG_URL
-				printf("### content_len > 4\n");
-				printf("%c", *buff_ptr);
-				printf("\n");
-			#endif
+			if (content_length > 4) {
+				#ifdef DEBUG_URL
+					printf("### content_len > 4\n");
+					printf("%c", *buff_ptr);
+					printf("\n");
+				#endif
 
-			req_str_buff[req_str_iterator++] = *buff_ptr;
-		}
+				req_str_buff[req_str_iterator++] = *buff_ptr;
+			}
 		}
 
 
