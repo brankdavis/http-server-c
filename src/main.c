@@ -14,7 +14,8 @@
 #define PROD
 
 
-char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
+char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\n";
+char SUCCESS_RESPONSETYPE_w_CONTENT_[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
 
 int
 calculate_content_length(int intitial_content_length, char *expected_url_path) {
@@ -190,13 +191,13 @@ int main() {
 			#endif
 
 			strcat(contentLengthBuf, req_str_buff);
-			strcat(SUCCESS_RESPONSE, contentLengthBuf);
+			strcat(SUCCESS_RESPONSETYPE_w_CONTENT_, contentLengthBuf);
 
 			#ifdef DEBUG_URL
-				printf("\n  ### DEBUG ### final SUCCESS_RESPONSE: %s\n", SUCCESS_RESPONSE);
+				printf("\n  ### DEBUG ### final SUCCESS_RESPONSETYPE_w_CONTENT_: %s\n", SUCCESS_RESPONSETYPE_w_CONTENT_);
 			#endif
 			
-			send(client_fd, SUCCESS_RESPONSE, strlen(SUCCESS_RESPONSE), 0);
+			send(client_fd, SUCCESS_RESPONSETYPE_w_CONTENT_, strlen(SUCCESS_RESPONSETYPE_w_CONTENT_), 0);
 			close(server_fd);
 		}
 	
