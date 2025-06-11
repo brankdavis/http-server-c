@@ -41,36 +41,10 @@ handle_not_found(int client, int server)
 }
 
 void
-handle_route(char *buff_ptr,  int route, int client, int server)
+handle_user_agent_route()
 {
-	printf("handling route: %s", buff_ptr);
-
-	if (route == ECHO) {
-		printf("handle echo route...\n");
-
-		char req_str_buff[20] = "";
-		char * req_str_buff_ptr = req_str_buff;
-		int req_str_iterator = 0;
-		int content_length = 0;
-
-		for (; *buff_ptr != ' '; buff_ptr++) {
-			printf("%c", *buff_ptr);
-			if (*buff_ptr != '/') {
-
-				#ifdef DEBUG_URL
-					printf("%c", *buff_ptr);
-					printf("\n");
-				#endif
-				req_str_buff[req_str_iterator++] = *buff_ptr;
-				content_length++;
-			}
-		}
-
-		handle_echo_route(req_str_buff_ptr, content_length, client, server);
-	}
-
+	printf("handle user agent route\n");
 }
-
 
 void
 handle_echo_route(char *req_string_buff, int content_length, int client, int server)
@@ -97,8 +71,43 @@ handle_echo_route(char *req_string_buff, int content_length, int client, int ser
 
 }
 
+void
+handle_route(char *buff_ptr,  int route, int client, int server)
+{
+	printf("handling route: %s", buff_ptr);
 
-enum Route path_to_route(char *path_buff){
+	if (route == ECHO) {
+		printf("handle echo route...\n");
+
+		char req_str_buff[20] = "";
+		char * req_str_buff_ptr = req_str_buff;
+		int req_str_iterator = 0;
+		int content_length = 0;
+
+		for (; *buff_ptr != ' '; buff_ptr++) {
+			printf("%c", *buff_ptr);
+			if (*buff_ptr != '/') {
+
+				#ifdef DEBUG_URL
+					printf("%c", *buff_ptr);
+					printf("\n");
+				#endif
+				req_str_buff[req_str_iterator++] = *buff_ptr;
+				content_length++;
+			}
+		}
+
+		handle_echo_route(req_str_buff_ptr, content_length, client, server);
+	} else if (route == USER_AGENT) {
+		handle_user_agent_route();
+	}
+
+}
+
+
+enum Route 
+path_to_route(char *path_buff)
+{
 
 	printf("PATH: %s\n", path_buff);
 
@@ -109,7 +118,9 @@ enum Route path_to_route(char *path_buff){
 }
 
 
-int main() {
+int 
+main() 
+{
 	// Disable output buffering
 	setbuf(stdout, NULL);
  	setbuf(stderr, NULL);
