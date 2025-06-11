@@ -5,53 +5,108 @@
 #include <netinet/ip.h>
 #include <string.h>
 #include <errno.h>
-#include <unistd.h>
+#include <unistd.h>L
 
-// #define DEBUG
-// #define DEBUG_URL
 #define DEBUG_EXTRACTED_URL
-#define TEST
-#define PROD
-
+#define ECHO_ROUTE_LENGTH 4
 
 char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\n\r\n";
 char SUCCESS_RESPONSETYPE_w_CONTENT_[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
 
-// char *expected_url_path = "echo"; // 4
-// //char *buff_ptr;
-// char extracted_url_path_buff[100] = "";
-// int extracted_path_buff_index = 0;
-// int content_length = 0;
-// int res;
+enum Route {
+	INVALID_ROUTE = -1,
+	EMPTY,
+	ECHO,
+	USER_AGENT
+};
 
-int
-calculate_content_length(int intitial_content_length, char *expected_url_path) 
+void
+move_to_start_of_path(char *buff) 
 {
-	return intitial_content_length - strlen(expected_url_path);
+	printf("BUFF STARTS WITH %c\n", buff[0]);
+	for(; *buff != '/'; buff++){
+		#ifdef DEBUG_EXTRACTED_URL
+			//printf("BUFF STARTS WITH %c", buff[0]);
+		#endif
+	}
+	printf("BUFF AFTER LOOP %c\n", *buff);
 }
 
-// void
-// move_to_start_of_path(char *buff) 
-// {
-// 	printf("BUFF STARTS WITH %c\n", buff[0]);
-// 	for(; *buff != '/'; buff++){
-// 		#ifdef DEBUG_EXTRACTED_URL
-// 			//printf("BUFF STARTS WITH %c", buff[0]);
-// 		#endif
-// 	}
-// 	printf("BUFF AFTER LOOP %c\n", *buff);
-// }
+void
+handle_not_found(int client, int server)
+{
+	char NOT_FOUND_RESPONSE[30] = "HTTP/1.1 404 Not Found\r\n\r\n";
+	send(client, NOT_FOUND_RESPONSE, strlen(NOT_FOUND_RESPONSE), 0);
+	close(server);
+}
 
-// void
-// extract_url_path(char *buff) 
-// {
-// 	printf("extracting url path....\n");
-// 	for(; *buff != '/'; buff++){
-// 			extracted_url_path_buff[extracted_path_buff_index++] = *buff;
-// 			content_length++;
-// 		}
+void
+handle_route(char *buff_ptr,  int route, int client, int server)
+{
+	printf("handling route: %s", buff_ptr);
 
-// }
+	if (route == ECHO) {
+		printf("handle echo route...\n");
+
+		char req_str_buff[20] = "";
+		char * req_str_buff_ptr = req_str_buff;
+		int req_str_iterator = 0;
+		int content_length = 0;
+
+		for (; *buff_ptr != ' '; buff_ptr++) {
+			printf("%c", *buff_ptr);
+			if (*buff_ptr != '/') {
+
+				#ifdef DEBUG_URL
+					printf("%c", *buff_ptr);
+					printf("\n");
+				#endif
+				req_str_buff[req_str_iterator++] = *buff_ptr;
+				content_length++;
+			}
+		}
+
+		handle_echo_route(req_str_buff_ptr, content_length, client, server);
+	}
+
+}
+
+
+void
+handle_echo_route(char *req_string_buff, int content_length, int client, int server)
+{
+	printf(" request string: %s \n", req_string_buff);
+	printf(" content len: %d \n", content_length);
+
+	char response[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
+
+	int contentLengthStrSize = strlen("Content-Length: " + content_length);
+	char contentLengthBuf[50];
+	char *contentLengthBuf_ptr = contentLengthBuf;
+	int trunc;
+
+	if ( (trunc=snprintf(contentLengthBuf, 50, "Content-Length: %d\r\n\r\n", content_length)) < 0 ) {
+		printf("Error converting string: %s \n", strerror(errno));
+	}
+
+	strcat(contentLengthBuf, req_string_buff);
+	strcat(SUCCESS_RESPONSETYPE_w_CONTENT_, contentLengthBuf);
+
+	send(client, SUCCESS_RESPONSETYPE_w_CONTENT_, strlen(SUCCESS_RESPONSETYPE_w_CONTENT_), 0);
+	close(server);
+
+}
+
+
+enum Route path_to_route(char *path_buff){
+
+	printf("PATH: %s\n", path_buff);
+
+	if (strcmp(path_buff, "echo") == 0) return ECHO;
+	if (strcmp(path_buff, "user-agent") == 0) return USER_AGENT;
+	if (strcmp(path_buff, " ") == 0) return EMPTY;
+	return INVALID_ROUTE;
+}
 
 
 int main() {
@@ -110,10 +165,6 @@ int main() {
 	}
 
 	printf("bytes read: %d \n", bytes_read);
-	//fwrite(buf, bytes_read, bytes_read,stdout);
-
-	//*buff_ptr = buf;
-
 
 	char *expected_url_path = "echo"; // 4
 	char *buff_ptr = buf;
@@ -124,19 +175,10 @@ int main() {
 	
 	/** GET /echo/abc HTTP/1.1\r\nHost: localhost:4221\r\nUser-Agent: curl/7.64.1\r\nAccept: */
 
-	printf("printing....\n");
-	for(; *buff_ptr != '/'; buff_ptr++){
-		#ifdef DEBUG
-			printf("%c", *buff_ptr);
-		#endif
-	}
+	for(; *buff_ptr != '/'; buff_ptr++){}
 
-	// move_to_start_of_path(buff_ptr);
 
 	buff_ptr++;
-
-	printf("buff after increment: %c\n", *buff_ptr);
-	printf("extracted buff: %s\n", extracted_url_path_buff);
 
 	if ( *buff_ptr == ' ' ) 
 	{
@@ -158,89 +200,31 @@ int main() {
 			content_length++;
 		}
 
-		//extract_url_path(buff_ptr);
-
 		#ifdef DEBUG_EXTRACTED_URL
 			printf("\n ### DEBUG ###: url buff : %s\n", extracted_url_path_buff);
 		#endif
+		
 
-		if ( (res = strcmp(expected_url_path, extracted_url_path_buff) != 0) ) 
-		{
-			char NOT_FOUND_RESPONSE[30] = "HTTP/1.1 404 Not Found\r\n\r\n";
-			send(client_fd, NOT_FOUND_RESPONSE, strlen(NOT_FOUND_RESPONSE), 0);
-			close(server_fd);
-		}
-		else {
-
-			// URL path is valid now get the request string
-
-			char req_str_buff[20] = "";
-			int req_str_iterator = 0;
-
-			for (; *buff_ptr != ' '; buff_ptr++) {
-				if (*buff_ptr != '/') {
-
-					#ifdef DEBUG_URL
-						printf("%c", *buff_ptr);
-						printf("\n");
-					#endif
-					content_length++;
-				}
-
-				if (content_length > 4) {
-					#ifdef DEBUG_URL
-						printf("### content_len > 4\n");
-						printf("%c", *buff_ptr);
-						printf("\n");
-					#endif
-
-					req_str_buff[req_str_iterator++] = *buff_ptr;
-				}
-			}
-
-
-			#ifdef DEBUG_URL
-				printf("\n ### DEBUG ###: requ str buff : %s\n", req_str_buff);
-			#endif
-
-			content_length = calculate_content_length(content_length, expected_url_path);
-
-			#ifdef DEBUG_URL
-				printf("\n ### DEBUG ###: Content Lengh: %d\n", content_length);
-			#endif
-
-			//char response[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
-
-			int contentLengthStrSize = strlen("Content-Length: " + content_length);
-			char contentLengthBuf[50];
-			char *contentLengthBuf_ptr = contentLengthBuf;
-			int trunc;
+		enum Route extracted_route = path_to_route(extracted_url_path_buff);
+		switch(extracted_route) {
+			case ECHO: 
+				handle_route(buff_ptr, ECHO, client_fd, server_fd);
+				break;
 			
+			case USER_AGENT:
+				printf("handle user-agent route");
+				handle_route(buff_ptr, USER_AGENT, client_fd, server_fd);
+				break;
 
-			#ifdef DEBUG_URL
-				printf("\n  ### DEBUG ### Content Lengh Size: %d\n", contentLengthStrSize);
-			#endif
+			case EMPTY:
+				printf("handle empty route");
+				break;
 
-			if ( (trunc=snprintf(contentLengthBuf, 50, "Content-Length: %d\r\n\r\n", content_length)) < 0 ) {
-				printf("Error converting string: %s \n", strerror(errno));
-			}
 
-			#ifdef DEBUG_URL
-				printf("### DEBUG ### sprintf returned value (trunc): %d\n", trunc);
-				printf("### DEBUG ### content length buffer: %s\n",contentLengthBuf);
-			#endif
-
-			strcat(contentLengthBuf, req_str_buff);
-			strcat(SUCCESS_RESPONSETYPE_w_CONTENT_, contentLengthBuf);
-
-			#ifdef DEBUG_URL
-				printf("\n  ### DEBUG ### final SUCCESS_RESPONSETYPE_w_CONTENT_: %s\n", SUCCESS_RESPONSETYPE_w_CONTENT_);
-			#endif
-			
-			send(client_fd, SUCCESS_RESPONSETYPE_w_CONTENT_, strlen(SUCCESS_RESPONSETYPE_w_CONTENT_), 0);
-			close(server_fd);
+			default:
+				printf("route not supported");
+				handle_not_found(client_fd, server_fd);
 		}
-	
 
 	}
 	
