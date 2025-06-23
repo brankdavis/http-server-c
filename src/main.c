@@ -6,31 +6,12 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-
-#define DEBUG_EXTRACTED_URL
-#define ECHO_ROUTE_LENGTH 4
+#include "data.h"
 
 char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\n\r\n";
 char SUCCESS_RESPONSETYPE_w_CONTENT_[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
 
-enum Route {
-	INVALID_ROUTE = -1,
-	EMPTY,
-	ECHO,
-	USER_AGENT
-};
 
-void
-move_to_start_of_path(char *buff) 
-{
-	printf("BUFF STARTS WITH %c\n", buff[0]);
-	for(; *buff != '/'; buff++){
-		#ifdef DEBUG_EXTRACTED_URL
-			//printf("BUFF STARTS WITH %c", buff[0]);
-		#endif
-	}
-	printf("BUFF AFTER LOOP %c\n", *buff);
-}
 
 void
 handle_not_found(int client, int server)
@@ -41,20 +22,41 @@ handle_not_found(int client, int server)
 }
 
 void
-handle_user_agent_route()
+handle_user_agent_route(char *req, int client, int server)
 {
-	printf("handle user agent route\n");
+	char* user_agent_str = strstr(req, "User-Agent:");
+	char* user_agent_header = "User-Agent: ";
+	char contentLengthBuf[50];
+	int trunc;
+
+	printf("handle user agent route request: %s\n", req);
+	if (user_agent_str == NULL) {
+		printf("404");
+		close(server);
+	}
+
+	user_agent_str += strlen(user_agent_header);
+	printf("user agent: %s\n", user_agent_str);
+	
+	int content_length = strlen(user_agent_str);
+	if ( (trunc=snprintf(contentLengthBuf, 50, "Content-Length: %d\r\n\r\n", content_length)) < 0 ) {
+		printf("Error converting string: %s \n", strerror(errno));
+	}
+
+	strcat(SUCCESS_RESPONSETYPE_w_CONTENT_, contentLengthBuf);
+	strcat(SUCCESS_RESPONSETYPE_w_CONTENT_, user_agent_str);
+
+	send(client, SUCCESS_RESPONSETYPE_w_CONTENT_, strlen(SUCCESS_RESPONSETYPE_w_CONTENT_), 0);
+	close(server);
+
 }
 
 void
-handle_echo_route(char *req_string_buff, int content_length, int client, int server)
+handle_echo_route(char *req_string_buff, int client, int server)
 {
 	printf(" request string: %s \n", req_string_buff);
-	printf(" content len: %d \n", content_length);
 
-	char response[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
-
-	int contentLengthStrSize = strlen("Content-Length: " + content_length);
+	int content_length = strlen(req_string_buff);
 	char contentLengthBuf[50];
 	char *contentLengthBuf_ptr = contentLengthBuf;
 	int trunc;
@@ -71,47 +73,12 @@ handle_echo_route(char *req_string_buff, int content_length, int client, int ser
 
 }
 
-void
-handle_route(char *buff_ptr,  int route, int client, int server)
-{
-	printf("handling route: %s", buff_ptr);
-
-	if (route == ECHO) {
-		printf("handle echo route...\n");
-
-		char req_str_buff[20] = "";
-		char * req_str_buff_ptr = req_str_buff;
-		int req_str_iterator = 0;
-		int content_length = 0;
-
-		for (; *buff_ptr != ' '; buff_ptr++) {
-			printf("%c", *buff_ptr);
-			if (*buff_ptr != '/') {
-
-				#ifdef DEBUG_URL
-					printf("%c", *buff_ptr);
-					printf("\n");
-				#endif
-				req_str_buff[req_str_iterator++] = *buff_ptr;
-				content_length++;
-			}
-		}
-
-		handle_echo_route(req_str_buff_ptr, content_length, client, server);
-	} else if (route == USER_AGENT) {
-		handle_user_agent_route();
-	}
-
-}
-
-
 enum Route 
 path_to_route(char *path_buff)
 {
 
 	printf("PATH: %s\n", path_buff);
-
-	if (strcmp(path_buff, "echo") == 0) return ECHO;
+	if (strstr(path_buff, "echo") != NULL) return ECHO;
 	if (strcmp(path_buff, "user-agent") == 0) return USER_AGENT;
 	if (strcmp(path_buff, " ") == 0) return EMPTY;
 	return INVALID_ROUTE;
@@ -177,7 +144,6 @@ main()
 
 	printf("bytes read: %d \n", bytes_read);
 
-	char *expected_url_path = "echo"; // 4
 	char *buff_ptr = buf;
 	char extracted_url_path_buff[100] = "";
 	int extracted_path_buff_index = 0;
@@ -186,7 +152,15 @@ main()
 	
 	/** GET /echo/abc HTTP/1.1\r\nHost: localhost:4221\r\nUser-Agent: curl/7.64.1\r\nAccept: */
 
-	for(; *buff_ptr != '/'; buff_ptr++){}
+	// TODO:  init structs
+
+	//printf("\n ### DEBUG ###: request buff : %s\n", buf);
+
+	start_line.protocol = GET; // Future: need more robust method to get protocol
+	for(; *buff_ptr != '/'; buff_ptr++){
+		
+		
+	}
 
 
 	buff_ptr++;
@@ -202,13 +176,8 @@ main()
 	{
 
 		// extract url path
-		for(; *buff_ptr != '/'; buff_ptr++){
-			#ifdef DEBUG
-				printf("%c", *buff_ptr);
-			#endif
-
+		for(; *buff_ptr != ' '; buff_ptr++){
 			extracted_url_path_buff[extracted_path_buff_index++] = *buff_ptr;
-			content_length++;
 		}
 
 		#ifdef DEBUG_EXTRACTED_URL
@@ -219,12 +188,11 @@ main()
 		enum Route extracted_route = path_to_route(extracted_url_path_buff);
 		switch(extracted_route) {
 			case ECHO: 
-				handle_route(buff_ptr, ECHO, client_fd, server_fd);
+				handle_echo_route(extracted_url_path_buff, client_fd, server_fd);
 				break;
 			
 			case USER_AGENT:
-				printf("handle user-agent route");
-				handle_route(buff_ptr, USER_AGENT, client_fd, server_fd);
+				handle_user_agent_route(buff_ptr, client_fd, server_fd);
 				break;
 
 			case EMPTY:
@@ -239,8 +207,5 @@ main()
 
 	}
 	
-	
-	
-
 	return 0;
 }
