@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include "data.h"
+#include "utils/utils.h"
 
 char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\n\r\n";
 char SUCCESS_RESPONSETYPE_w_CONTENT_[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
@@ -24,8 +25,7 @@ handle_not_found(int client, int server)
 void
 handle_user_agent_route(char *req, int client, int server)
 {
-	char* user_agent_str = strstr(req, "User-Agent:");
-	char* user_agent_header = "User-Agent: ";
+	char* user_agent_str = strstr(req, USER_AGENT_HEADER);;
 	char contentLengthBuf[50];
 	int trunc;
 
@@ -35,10 +35,9 @@ handle_user_agent_route(char *req, int client, int server)
 		close(server);
 	}
 
-	user_agent_str += strlen(user_agent_header);
-	printf("user agent: %s\n", user_agent_str);
-	
-	int content_length = strlen(user_agent_str);
+	user_agent_str += strlen(USER_AGENT_HEADER);
+	int content_length = strlen_noSpaces(user_agent_str);
+
 	if ( (trunc=snprintf(contentLengthBuf, 50, "Content-Length: %d\r\n\r\n", content_length)) < 0 ) {
 		printf("Error converting string: %s \n", strerror(errno));
 	}
@@ -54,11 +53,9 @@ handle_user_agent_route(char *req, int client, int server)
 void
 handle_echo_route(char *req_string_buff, int client, int server)
 {
-	printf(" request string: %s \n", req_string_buff);
-
+	req_string_buff = extract_req_path(req_string_buff);
 	int content_length = strlen(req_string_buff);
 	char contentLengthBuf[50];
-	char *contentLengthBuf_ptr = contentLengthBuf;
 	int trunc;
 
 	if ( (trunc=snprintf(contentLengthBuf, 50, "Content-Length: %d\r\n\r\n", content_length)) < 0 ) {
@@ -76,8 +73,6 @@ handle_echo_route(char *req_string_buff, int client, int server)
 enum Route 
 path_to_route(char *path_buff)
 {
-
-	printf("PATH: %s\n", path_buff);
 	if (strstr(path_buff, "echo") != NULL) return ECHO;
 	if (strcmp(path_buff, "user-agent") == 0) return USER_AGENT;
 	if (strcmp(path_buff, " ") == 0) return EMPTY;
@@ -179,11 +174,6 @@ main()
 		for(; *buff_ptr != ' '; buff_ptr++){
 			extracted_url_path_buff[extracted_path_buff_index++] = *buff_ptr;
 		}
-
-		#ifdef DEBUG_EXTRACTED_URL
-			printf("\n ### DEBUG ###: url buff : %s\n", extracted_url_path_buff);
-		#endif
-		
 
 		enum Route extracted_route = path_to_route(extracted_url_path_buff);
 		switch(extracted_route) {

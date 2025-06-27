@@ -5,6 +5,7 @@
 
 #define DEBUG_EXTRACTED_URL
 #define ECHO_ROUTE_LENGTH 4
+#define USER_AGENT_HEADER "User-Agent: "
 
 
 enum Route {
