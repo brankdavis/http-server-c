@@ -24,7 +24,7 @@ struct startLine {
 	enum Protocol protocol;
 	char url_path[BUFSIZ];
 	char http_version[10];
-} start_line;
+};
 
 struct headers {
 	/* data */
@@ -43,6 +43,11 @@ struct Request {
 	struct startLine start_line;
 	struct headers header;
 	struct body body;
-} req;
+};
+
+struct thread_args {
+	int client_fd;
+	int server_fd;
+};
 
 #endif

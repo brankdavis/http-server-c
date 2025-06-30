@@ -8,10 +8,10 @@
 #include <unistd.h>
 #include "data.h"
 #include "utils/utils.h"
+#include <pthread.h>
 
 char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\n\r\n";
 char SUCCESS_RESPONSETYPE_w_CONTENT_[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
-
 
 
 void
@@ -70,15 +70,79 @@ handle_echo_route(char *req_string_buff, int client, int server)
 
 }
 
-enum Route 
-path_to_route(char *path_buff)
+void*
+handle_request(void *arg)
 {
-	if (strstr(path_buff, "echo") != NULL) return ECHO;
-	if (strcmp(path_buff, "user-agent") == 0) return USER_AGENT;
-	if (strcmp(path_buff, " ") == 0) return EMPTY;
-	return INVALID_ROUTE;
-}
+		struct thread_args *args = (struct thread_args*)arg;
+		printf("Client connected\n");
+		printf("client %d\n", args->client_fd);
+		printf("server %d\n", args->server_fd);
+		
 
+		char *buff_ptr;
+		char extracted_url_path_buff[100] = "";
+		int extracted_path_buff_index = 0;
+		int content_length = 0;
+		int res;
+		char buf[BUFSIZ];
+		int bytes_read;
+
+		if ((bytes_read = read(args->client_fd, buf, BUFSIZ-1)) < 0 ) {
+			printf("Socket Read Error: %s \n", strerror(errno));
+		}
+
+		buff_ptr = buf;
+
+		//sl.protocol = GET; // Future: need more robust method to get protocol
+		for(; *buff_ptr != '/'; buff_ptr++){
+			
+			
+		}
+
+		printf("request: %c\n", *buff_ptr);
+
+
+		buff_ptr++;
+
+		if ( *buff_ptr == ' ' ) 
+		{
+			printf("EMPTY REAQUESTSTRING %c\n", *buff_ptr);
+
+			send(args->client_fd, SUCCESS_RESPONSE, strlen(SUCCESS_RESPONSE), 0);
+			//close(args->server_fd);
+		} 
+		else 
+		{
+
+			// extract url path
+			for(; *buff_ptr != ' '; buff_ptr++){
+				extracted_url_path_buff[extracted_path_buff_index++] = *buff_ptr;
+			}
+
+			enum Route extracted_route = path_to_route(extracted_url_path_buff);
+			switch(extracted_route) {
+				case ECHO: 
+					handle_echo_route(extracted_url_path_buff, args->client_fd, args->server_fd);
+					break;
+				
+				case USER_AGENT:
+					handle_user_agent_route(buff_ptr, args->client_fd, args->server_fd);
+					break;
+
+				case EMPTY:
+					printf("handle empty route\n");
+					handle_not_found(args->client_fd, args->server_fd);
+					break;
+
+
+				default:
+					printf("route not supported\n");
+					handle_not_found(args->client_fd, args->server_fd);
+			}
+
+		}
+
+}
 
 int 
 main() 
@@ -89,7 +153,8 @@ main()
 
 	int server_fd, client_addr_len, client_fd, bytes_read;
 	struct sockaddr_in client_addr;
-	char buf[BUFSIZ];
+	pthread_t thread;
+	
 	//
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd == -1) {
@@ -124,76 +189,35 @@ main()
 	
 	printf("Waiting for a client to connect...\n");
 	client_addr_len = sizeof(client_addr);
-	
-	// accept
-	if( (client_fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len)) < 0 ) {
-		printf("Request/Connection error: %s \n", strerror(errno));
-		return 1;
-	}
-	printf("Client connected\n");
-
-	//extract
-	if ((bytes_read = read(client_fd, buf, BUFSIZ-1)) < 0 ) {
-		printf("Socket Read Error: %s \n", strerror(errno));
-	}
-
-	printf("bytes read: %d \n", bytes_read);
-
-	char *buff_ptr = buf;
-	char extracted_url_path_buff[100] = "";
-	int extracted_path_buff_index = 0;
-	int content_length = 0;
-	int res;
-	
-	/** GET /echo/abc HTTP/1.1\r\nHost: localhost:4221\r\nUser-Agent: curl/7.64.1\r\nAccept: */
-
-	// TODO:  init structs
-
-	//printf("\n ### DEBUG ###: request buff : %s\n", buf);
-
-	start_line.protocol = GET; // Future: need more robust method to get protocol
-	for(; *buff_ptr != '/'; buff_ptr++){
-		
-		
-	}
 
 
-	buff_ptr++;
+	while(1) {
 
-	if ( *buff_ptr == ' ' ) 
-	{
-		printf("EMPTY REAQUESTSTRING %c\n", *buff_ptr);
-
-		send(client_fd, SUCCESS_RESPONSE, strlen(SUCCESS_RESPONSE), 0);
-		close(server_fd);
-	} 
-	else 
-	{
-
-		// extract url path
-		for(; *buff_ptr != ' '; buff_ptr++){
-			extracted_url_path_buff[extracted_path_buff_index++] = *buff_ptr;
+		// accept
+		if( (client_fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len)) < 0 ) {
+			printf("Request/Connection error: %s \n", strerror(errno));
+			return 1;
 		}
 
-		enum Route extracted_route = path_to_route(extracted_url_path_buff);
-		switch(extracted_route) {
-			case ECHO: 
-				handle_echo_route(extracted_url_path_buff, client_fd, server_fd);
-				break;
-			
-			case USER_AGENT:
-				handle_user_agent_route(buff_ptr, client_fd, server_fd);
-				break;
+		struct thread_args *args = malloc(sizeof(struct thread_args));
 
-			case EMPTY:
-				printf("handle empty route");
-				break;
-
-
-			default:
-				printf("route not supported");
-				handle_not_found(client_fd, server_fd);
+		if (args == NULL) {
+			perror("malloc failed");
+			return 1;
 		}
+
+
+		args->client_fd = client_fd;
+		args-> server_fd = server_fd;
+
+
+		if (pthread_create(&thread, NULL, handle_request, args) != 0) {
+			printf("Thread error %s \n", strerror(errno));
+			close(client_fd);
+			return 1;
+		}
+
+		pthread_detach(thread);
 
 	}
 	
