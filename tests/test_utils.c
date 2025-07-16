@@ -1,8 +1,8 @@
 #include <stdio.h>
-#include "../utils.h"
-#include "test_utils.h"
+#include "../src/utils/utils.h"
+#include "assert.h"
 
-//#define RUN_TESTS
+#define RUN_TESTS
 
 
 void test_strlen_noSpaces() {
@@ -21,6 +21,10 @@ void test_strlen_noSpaces() {
     char* req4 = 
         " echo/blueberry";
     ASSERT_EQ(strlen_noSpaces(req4), 14);
+
+    char* req5 = 
+        " strawberry/grape";
+    ASSERT_EQ(strlen_noSpaces(req5), 16);
 
 }
 
@@ -47,8 +51,8 @@ void test_extract_req_path() {
 
 #ifdef RUN_TESTS
     #define NO_SPACES_TEST
-    #define NO_ECHO_TEST
-    #define EXTRACT_REQ_TEST
+    // #define NO_ECHO_TEST
+    // #define EXTRACT_REQ_TEST
 int main() {
 
     #ifdef NO_SPACES_TEST

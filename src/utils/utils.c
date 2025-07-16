@@ -1,7 +1,9 @@
 #include <string.h>
-#include "utils.h"
+#include <errno.h>
 #include <ctype.h>
+#include "utils.h"
 #include "../data.h"
+
 
 
 //#define DEBUG
@@ -41,13 +43,4 @@ char* extract_req_path(char* str)
 {
     str = strstr(str, "/");
     return ++str;
-}
-
-enum Route 
-path_to_route(char *path_buff)
-{
-	if (strstr(path_buff, "echo") != NULL) return ECHO;
-	if (strcmp(path_buff, "user-agent") == 0) return USER_AGENT;
-	if (strcmp(path_buff, "/") == 0) return EMPTY;
-	return INVALID_ROUTE;
 }

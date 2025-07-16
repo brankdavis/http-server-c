@@ -8,20 +8,34 @@
 #define USER_AGENT_HEADER "User-Agent: "
 
 
-enum Route {
+
+enum ROUTES {
 	INVALID_ROUTE = -1,
 	EMPTY,
 	ECHO,
+	FILES,
 	USER_AGENT
 };
 
-enum Protocol {
+enum RESPONSE_CODES {
+	NOT_FOUND = 404,
+	SUCCESS = 200
+};
+
+enum PROTOCOLS {
     GET,
     POST
 };
 
+struct Response {
+	enum RESPONSE_CODES code;
+	char *content_type;
+	char *content;
+	int content_length;
+};
+
 struct startLine {
-	enum Protocol protocol;
+	enum PROTOCOLS protocol;
 	char url_path[BUFSIZ];
 	char http_version[10];
 };
