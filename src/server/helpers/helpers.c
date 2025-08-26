@@ -228,7 +228,7 @@ build_success_response(Response* resp)
         return SUCCESS_RESPONSE;
 
     } else {
-        printf("Building content char *: %s\n", resp->content);
+        printf("Building content string: %s\n", resp->content);
         strcat(SUCCESS_RESPONSE, resp->content_type);
 
         int offset;

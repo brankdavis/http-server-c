@@ -20,13 +20,28 @@ handle_not_found(int client, int server, Response *resp)
     resp->content = NOT_FOUND_RESPONSE;
 }
 
+static inline bool
+has_supported_compression_scheme(String encoding) 
+{
+    if (strstr(encoding, GZIP) != NULL) return true;
+    return false;
+
+}
+
 static inline COMPRESSION_SCHEMES
 get_compression_scheme(Request *req)
 {
     if (req && req->headers && req->headers->accept_encoding) {
-        if (strcmp(req->headers->accept_encoding, GZIP) == 0) {
-            return gzip;
+        String encoding = req->headers->accept_encoding;
+        
+        if (has_supported_compression_scheme(encoding)) {
+            
+            if (strstr(encoding, GZIP) != NULL) {
+                return gzip;
+            }
+            
         }
+        
     }
     return UNSUPPORTED_SCHEME;
 }
