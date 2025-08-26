@@ -1,4 +1,4 @@
-#include <string.h>
+#include <char *.h>
 
 #define ASSERT_EQ(actual, expected) \
     if ((actual) != (expected)) { \

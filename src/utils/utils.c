@@ -39,7 +39,7 @@ int strlen_noEcho(char *str)
 
 }
 
-char* extract_req_path(char* str) 
+char * extract_req_path(char * str) 
 {
     str = strstr(str, "/");
     return ++str;

@@ -40,14 +40,13 @@ server(void *arg)
 		// step 2. Process Request
 		if (strlen(request->url) == 0) 
 		{
-			printf("EMPTY REQUESTSTRING \n");
+			printf("EMPTY REQUESTchar * \n");
             response->code = SUCCESS;
 			response->content_length = 0;
 		} 
 		else 
 		{
-			enum ROUTES extracted_route = path_to_route(request->url);
-
+			ROUTES extracted_route = path_to_route(request->url);
 			switch(extracted_route) {
 				case ECHO: 
 					response = handle_echo_route(request, args->client_fd, args->server_fd);
@@ -80,7 +79,6 @@ server(void *arg)
 		if (response->code == SUCCESS) {
 			
 			resp_buf = build_success_response(response);
-            printf(" ### DEBUG ### response buffer: %s\n", resp_buf);
             send(args->client_fd, resp_buf, strlen(resp_buf), 0);
 		}
 		else if (response->code == CREATED) {

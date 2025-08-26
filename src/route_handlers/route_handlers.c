@@ -20,6 +20,17 @@ handle_not_found(int client, int server, Response *resp)
     resp->content = NOT_FOUND_RESPONSE;
 }
 
+static inline COMPRESSION_SCHEMES
+get_compression_scheme(Request *req)
+{
+    if (req && req->headers && req->headers->accept_encoding) {
+        if (strcmp(req->headers->accept_encoding, GZIP) == 0) {
+            return gzip;
+        }
+    }
+    return UNSUPPORTED_SCHEME;
+}
+
 static Response* 
 handle_get_files(char *filename_buf, int client, int server)
 {
@@ -126,7 +137,7 @@ handle_files_route(Request *request, int client, int server)
 Response*
 handle_user_agent_route(Request *request,  int client, int server)
 {
-	char* user_agent_str = request->headers->user_agent;
+	char * user_agent_str = request->headers->user_agent;
     Response *response = malloc(sizeof(Response));
 
 	printf("handle user agent route request: %s\n", request->headers->user_agent);
@@ -149,9 +160,19 @@ handle_echo_route(Request *request, int client, int server)
 {
 	String req_string = extract_req_path(request->url);
 	int content_length = strlen(req_string);
-	char contentLengthBuf[50];
-	int trunc;
     Response *response = malloc(sizeof(Response));
+
+    COMPRESSION_SCHEMES scheme = get_compression_scheme(request);
+
+    switch (scheme)
+    {
+    case gzip:
+        response->content_encoding = GZIP;
+        break;
+    
+    default:
+        break;
+    }
 
     response->code = SUCCESS;
     response->content_type = CONTENT_TYPE_TEXT;

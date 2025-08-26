@@ -6,24 +6,31 @@
 #define DEBUG_EXTRACTED_URL
 #define ECHO_ROUTE_LENGTH 4
 #define USER_AGENT_HEADER "User-Agent: "
+#define GZIP "gzip"
 
-typedef char* String;
+typedef char * String;
 
-enum ROUTES {
+typedef enum {
 	INVALID_ROUTE = -1,
 	EMPTY,
 	ECHO,
 	FILES,
 	USER_AGENT
-};
+} ROUTES;
 
-enum RESPONSE_CODES {
+typedef enum {
+	gzip,
+	UNSUPPORTED_SCHEME
+
+} COMPRESSION_SCHEMES;
+
+typedef enum {
 	BAD_REQUEST = 400,
 	CREATED = 201,
 	NOT_FOUND = 404,
 	SUCCESS = 200,
 	SERVER_ERROR = 500
-};
+} RESPONSE_CODES;
 
 typedef enum {
     GET,
@@ -32,17 +39,19 @@ typedef enum {
 } REQUEST_METHODS;
 
 typedef struct {
-	char *host;
-	char *user_agent;
-	char *accept;
-	char *content_type;
+	String host;
+	String user_agent;
+	String accept;
+	String accept_encoding;
+	String content_type;
 	int  content_length;
 } Headers;
 
 typedef struct {
-	enum RESPONSE_CODES code;
-	char *content_type;
-	char *content;
+	RESPONSE_CODES code;
+	String content_type;
+	String content;
+	String content_encoding;
 	int content_length;
 } Response;
 

@@ -4,7 +4,7 @@
 #include "../../data.h"
 #include "../../utils/utils.h"
 
-enum ROUTES 
+ROUTES 
 path_to_route(char *path_buff)
 {
 	if (strstr(path_buff, "echo") != NULL) return ECHO;
@@ -44,11 +44,11 @@ construct_request(char* request_string)
     char *ptr = request_string;
     char http_method_buf[10] = "";
     char url_buff[BUFSIZ];
-    const char* http_version_beginning = "H";
     char http_version_buff[10];
     char host_buff[BUFSIZ];
     char user_agent_buff[BUFSIZ];
     char accept_buff[BUFSIZ];
+    char accept_encoding_buff[BUFSIZ];
     char content_type_bUff[BUFSIZ];
     char content_len_buff[BUFSIZ];
 
@@ -131,6 +131,21 @@ construct_request(char* request_string)
         headers->accept = NULL;
     }
 
+    // ---- Accept-Encoding ----
+    index = 0;
+    char * accept_encoding = (strstr(ptr, "Accept-Encoding:"));
+    if (accept_encoding) {
+        accept_encoding += strlen("Accept-Encoding:");
+        while(*accept_encoding == ' ') accept_encoding++;
+        for(; !(accept_encoding[0] == '\r' && accept_encoding[1] == '\n'); accept_encoding++, index++) {
+            accept_encoding_buff[index] = *accept_encoding;
+        }
+        accept_encoding_buff[index] = '\0';
+        headers->accept_encoding = strdup(accept_encoding_buff);
+    } else {
+        headers->accept_encoding = NULL;
+    }
+
     // -- Content-Type ----
     index = 0;
     char *ct_type = (strstr(ptr, "Content-Type:"));
@@ -177,7 +192,8 @@ construct_request(char* request_string)
 }
 
 // --- Cleanup ---
-void free_request(Request *req) {
+void 
+free_request(Request *req) {
     if (!req) return;
     free(req->url);
     free(req->version);
@@ -198,31 +214,40 @@ build_success_response(Response* resp)
 {
     printf("building response...\n");
 
-    char *SUCCESS_RESPONSE = malloc(1024);
-    char *content_buffer = malloc(512); 
+    char *SUCCESS_RESPONSE = malloc(BUFSIZ);
+    char *content_buffer = malloc(512);
+    char *content_enc_buffer = malloc(512);
     
     strcpy(SUCCESS_RESPONSE, "HTTP/1.1 200 OK\r\n");
 
-    if (resp->content == NULL) {
-        // required to add remianing CRLF headers
-        printf("returning response with no content. \n");
+    printf("resp content: %s\n", resp->content);
 
+    if (resp->content_length < 1) {
+        // required to add remianing CRLF headers
         strcat(SUCCESS_RESPONSE, "\r\n\r\n");
         return SUCCESS_RESPONSE;
 
     } else {
-        printf("Building content string: %s\n", resp->content);
+        printf("Building content char *: %s\n", resp->content);
         strcat(SUCCESS_RESPONSE, resp->content_type);
-        int trunc;
-        if ( (trunc=snprintf(content_buffer, 512, "Content-Length: %d\r\n\r\n", resp->content_length)) < 0 ) {
-            printf("Error interpolating response string: %s \n", strerror(errno));
+
+        int offset;
+
+        if (resp->content_encoding != NULL) {
+            if ( (offset =snprintf(content_enc_buffer, 512, "Content-Encoding: %s\r\n\r\n", resp->content_encoding)) < 0 ) {
+                printf("Error interpolating Content Encoding: %s \n", strerror(errno));
+            }
+
+            strcat(SUCCESS_RESPONSE, content_enc_buffer);
         }
 
+        offset = 0;
+        if ( (offset=snprintf(content_buffer, 512, "Content-Length: %d\r\n\r\n", resp->content_length)) < 0 ) {
+                printf("Error interpolating Content Length: %s \n", strerror(errno));
+        }
         strcat(content_buffer, resp->content);
         strcat(SUCCESS_RESPONSE, content_buffer);
     }
-
-    printf("here\n");
 
     return SUCCESS_RESPONSE;
 }
