@@ -1,20 +1,12 @@
 #ifndef SERVER_HELPERS_H
 #define SERVER_HELPERS_H
 
-
-enum RESPONSE_CODES {
-	NOT_FOUND = 404,
-	SUCCESS = 200
-};
-
-struct Response {
-	enum RESPONSE_CODES code;
-	char *content_type;
-	char *content;
-    int content_length;
-};
+#include "../../data.h"
 
 enum ROUTES path_to_route(char *path_buff);
-char *build_success_response(struct Response* resp);
+enum REQUEST_METHODS extract_request_method(char *req);
+Request* construct_request(char* request_string);
+char *build_success_response(Response* resp);
+void free_request(Request *req);
 
 #endif

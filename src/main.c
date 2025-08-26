@@ -64,7 +64,7 @@ main()
 			return 1;
 		}
 
-		struct thread_args *args = malloc(sizeof(struct thread_args));
+		Server_args *args = malloc(sizeof(Server_args));
 
 		if (args == NULL) {
 			perror("malloc failed");

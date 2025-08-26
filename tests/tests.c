@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "../src/utils/utils.h"
+#include "../src/server/helpers/helpers.h"
 #include "assert.h"
 
 #define RUN_TESTS
@@ -49,8 +50,20 @@ void test_extract_req_path() {
 
 }
 
+void test_extract_request_method() {
+    char* req1 =
+        "GET";
+    ASSERT_EQ(extract_request_method(req1), GET);
+
+    char* req2 =
+        "POST";
+    ASSERT_EQ(extract_request_method(req2), POST);
+
+}
+
 #ifdef RUN_TESTS
-    #define NO_SPACES_TEST
+    //#define NO_SPACES_TEST
+    #define EXTRACT_METHOD_TEST
     // #define NO_ECHO_TEST
     // #define EXTRACT_REQ_TEST
 int main() {
@@ -70,6 +83,12 @@ int main() {
     #ifdef EXTRACT_REQ_TEST
         printf("running tests for extract_req_path()...\n");
         test_extract_req_path();
+        printf("\n");
+    #endif
+
+    #ifdef EXTRACT_METHOD_TEST
+        printf("running tests for test_extract_request_method()...\n");
+        test_extract_request_method();
         printf("\n");
     #endif
 

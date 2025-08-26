@@ -9,22 +9,23 @@
 #include "../data.h"
 #include "../route_handlers/route_handlers.h"
 
+
+/*
+	HTTP Server:
+
+	step 1. Construct Request
+	step 2. Process Request
+	step 3. Construct Response
+	step 4. Send to client
+*/
 void*
 server(void *arg)
 {
-		struct thread_args *args = (struct thread_args*)arg;
-		struct Response *response = malloc(sizeof(struct Response));
-		printf("Client connected\n");
-		printf("client %d\n", args->client_fd);
-		printf("server %d\n", args->server_fd);
-		
+		Server_args *args = (Server_args*)arg;
+		Response *response = malloc(sizeof(Response));
+		Request *request = malloc(sizeof(Request));
 
-		char *buff_ptr, resp_ptr;
-		char *resp_buf, SUCCESS_RESPONSETYPE_w_CONTENT_[100] = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
-		char extracted_url_path_buff[100] = "";
-		int extracted_path_buff_index = 0;
-		int content_length = 0;
-		int res;
+		char *resp_buf;
 		char buf[BUFSIZ];
 		int bytes_read;
 		char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\n\r\n";
@@ -33,51 +34,37 @@ server(void *arg)
 			printf("Socket Read Error: %s \n", strerror(errno));
 		}
 
-		buff_ptr = buf;
-
-		//sl.protocol = GET; // Future: need more robust method to get protocol
-		for(; *buff_ptr != '/'; buff_ptr++){
-			
-			
-		}
-
-		printf("request: %c\n", *buff_ptr);
-
-
-		buff_ptr++;
-
-		if ( *buff_ptr == ' ' ) 
+		// step 1. Construct request
+		request = construct_request(buf);
+		
+		// step 2. Process Request
+		if (strlen(request->url) == 0) 
 		{
-			printf("EMPTY REAQUESTSTRING %c\n", *buff_ptr);
+			printf("EMPTY REQUESTSTRING \n");
             response->code = SUCCESS;
+			response->content_length = 0;
 		} 
 		else 
 		{
+			enum ROUTES extracted_route = path_to_route(request->url);
 
-			// extract url path
-			for(; *buff_ptr != ' '; buff_ptr++){
-				extracted_url_path_buff[extracted_path_buff_index++] = *buff_ptr;
-			}
-
-			enum ROUTES extracted_route = path_to_route(extracted_url_path_buff);
 			switch(extracted_route) {
 				case ECHO: 
-					response = handle_echo_route(extracted_url_path_buff, args->client_fd, args->server_fd);
+					response = handle_echo_route(request, args->client_fd, args->server_fd);
 					break;
 				
 				case USER_AGENT:
-					response = handle_user_agent_route(buff_ptr, args->client_fd, args->server_fd);
+					response = handle_user_agent_route(request, args->client_fd, args->server_fd);
 					break;
 				
 				case FILES:
-					response = handle_files_route(extracted_url_path_buff, resp_buf, args->client_fd, args->server_fd);
+					response = handle_files_route(request, args->client_fd, args->server_fd);
 					break;
 
 				case EMPTY:
 					printf("handle empty route\n");
 					handle_not_found(args->client_fd, args->server_fd, response);
 					break;
-
 
 				default:
 					printf("route not supported\n");
@@ -87,19 +74,29 @@ server(void *arg)
 
 		}
 
-		// handle response
+		printf("return response: in server: %d\n", response->code);
+
+		// step 3. Construct Response
 		if (response->code == SUCCESS) {
 			
-			// build response
 			resp_buf = build_success_response(response);
             printf(" ### DEBUG ### response buffer: %s\n", resp_buf);
             send(args->client_fd, resp_buf, strlen(resp_buf), 0);
 		}
+		else if (response->code == CREATED) {
+			printf("response CREATED\n");
+    		char *SUCCESS_RESPONSE = "HTTP/1.1 201 Created\r\n\r\n";
+			send(args->client_fd, SUCCESS_RESPONSE, strlen(SUCCESS_RESPONSE), 0);
+		}
+		else if (response->code == SERVER_ERROR) {
+			printf("server error;\n");
+			close(args->server_fd);
+		}
         else {
-
-            // send 404 response
+            // send 4xx response
             send(args->client_fd, response->content, strlen(response->content), 0);
-
         }
+
+		free_request(request);
 
 }
