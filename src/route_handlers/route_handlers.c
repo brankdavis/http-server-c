@@ -5,10 +5,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdbool.h>
 #include "../utils/utils.h"
 #include "route_handlers.h"
 #include "../data.h"
 #include <sys/socket.h>
+#include "../compress/compress.h"
 
 
 
@@ -18,32 +20,6 @@ handle_not_found(int client, int server, Response *resp)
 	char NOT_FOUND_RESPONSE[30] = "HTTP/1.1 404 Not Found\r\n\r\n";
     resp->code = NOT_FOUND;
     resp->content = NOT_FOUND_RESPONSE;
-}
-
-static inline bool
-has_supported_compression_scheme(String encoding) 
-{
-    if (strstr(encoding, GZIP) != NULL) return true;
-    return false;
-
-}
-
-static inline COMPRESSION_SCHEMES
-get_compression_scheme(Request *req)
-{
-    if (req && req->headers && req->headers->accept_encoding) {
-        String encoding = req->headers->accept_encoding;
-        
-        if (has_supported_compression_scheme(encoding)) {
-            
-            if (strstr(encoding, GZIP) != NULL) {
-                return gzip;
-            }
-            
-        }
-        
-    }
-    return UNSUPPORTED_SCHEME;
 }
 
 static Response* 
@@ -177,22 +153,10 @@ handle_echo_route(Request *request, int client, int server)
 	int content_length = strlen(req_string);
     Response *response = malloc(sizeof(Response));
 
-    COMPRESSION_SCHEMES scheme = get_compression_scheme(request);
-
-    switch (scheme)
-    {
-    case gzip:
-        response->content_encoding = GZIP;
-        break;
-    
-    default:
-        break;
-    }
-
     response->code = SUCCESS;
     response->content_type = CONTENT_TYPE_TEXT;
-    response->content = req_string;
     response->content_length = content_length;
+    response->content = req_string;
 
     return response;
 

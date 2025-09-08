@@ -11,11 +11,6 @@
 typedef char * String;
 
 typedef enum {
-	false,
-	true
-} bool;
-
-typedef enum {
 	INVALID_ROUTE = -1,
 	EMPTY,
 	ECHO,

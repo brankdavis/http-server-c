@@ -3,6 +3,7 @@
         "data.h": "c",
         "utils.h": "c",
         "stdlib.h": "c",
-        "socket.h": "c"
+        "socket.h": "c",
+        "zlib.h": "c"
     }
 }

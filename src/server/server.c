@@ -40,9 +40,11 @@ server(void *arg)
 		// step 2. Process Request
 		if (strlen(request->url) == 0) 
 		{
-			printf("EMPTY REQUESTchar * \n");
+			printf("EMPTY REQUEST \n");
             response->code = SUCCESS;
 			response->content_length = 0;
+			response->content = "";
+			response->content_type = NULL;
 		} 
 		else 
 		{
@@ -77,9 +79,18 @@ server(void *arg)
 
 		// step 3. Construct Response
 		if (response->code == SUCCESS) {
+
+			size_t body_len;
+			if (response->content_length > 0) {
+				check_compression(response, request);
+			}
 			
-			resp_buf = build_success_response(response);
-            send(args->client_fd, resp_buf, strlen(resp_buf), 0);
+			resp_buf = build_success_response(response, &body_len);
+
+			// step 4. Send to client
+			printf("response body len: %zu\n", body_len);
+			printf("response body: %s\n", resp_buf);
+            send(args->client_fd, resp_buf, body_len, 0);
 		}
 		else if (response->code == CREATED) {
 			printf("response CREATED\n");
@@ -94,6 +105,7 @@ server(void *arg)
             // send 4xx response
             send(args->client_fd, response->content, strlen(response->content), 0);
         }
+		close(args->client_fd);
 
 		free_request(request);
 

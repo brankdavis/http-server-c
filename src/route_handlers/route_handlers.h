@@ -1,8 +1,8 @@
 #ifndef ROUTEHANDLERS_H
 #define ROUTEHANDLERS_H
 
-#define CONTENT_TYPE_TEXT "Content-Type: text/plain\r\n"
-#define CONTENT_TYPE_OCTET "Content-Type: application/octet-stream\r\n"
+#define CONTENT_TYPE_TEXT "text/plain"
+#define CONTENT_TYPE_OCTET "application/octet-stream"
 
 #include "../data.h"
 

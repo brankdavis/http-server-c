@@ -3,6 +3,7 @@
 #include <string.h>
 #include "../../data.h"
 #include "../../utils/utils.h"
+#include "../../compress/compress.h"
 
 ROUTES 
 path_to_route(char *path_buff)
@@ -209,45 +210,77 @@ free_request(Request *req) {
     free(req);
 }
 
-char *
-build_success_response(Response* resp)
-{
+char*
+build_success_response(Response *resp, size_t *body_len) {
     printf("building response...\n");
 
-    char *SUCCESS_RESPONSE = malloc(BUFSIZ);
-    char *content_buffer = malloc(512);
-    char *content_enc_buffer = malloc(512);
-    
-    strcpy(SUCCESS_RESPONSE, "HTTP/1.1 200 OK\r\n");
+    // Build headers first
+    char header_buffer[1024];  // enough space for headers
+    int header_len = 0;
 
-    printf("resp content: %s\n", resp->content);
+    header_len += snprintf(header_buffer + header_len, sizeof(header_buffer) - header_len,
+                           "HTTP/1.1 200 OK\r\n");
 
-    if (resp->content_length < 1) {
-        // required to add remianing CRLF headers
-        strcat(SUCCESS_RESPONSE, "\r\n\r\n");
-        return SUCCESS_RESPONSE;
 
-    } else {
-        printf("Building content string: %s\n", resp->content);
-        strcat(SUCCESS_RESPONSE, resp->content_type);
-
-        int offset;
-
-        if (resp->content_encoding != NULL) {
-            if ( (offset =snprintf(content_enc_buffer, 512, "Content-Encoding: %s\r\n\r\n", resp->content_encoding)) < 0 ) {
-                printf("Error interpolating Content Encoding: %s \n", strerror(errno));
-            }
-
-            strcat(SUCCESS_RESPONSE, content_enc_buffer);
-        }
-
-        offset = 0;
-        if ( (offset=snprintf(content_buffer, 512, "Content-Length: %d\r\n\r\n", resp->content_length)) < 0 ) {
-                printf("Error interpolating Content Length: %s \n", strerror(errno));
-        }
-        strcat(content_buffer, resp->content);
-        strcat(SUCCESS_RESPONSE, content_buffer);
+    if (resp->content_type != NULL) {
+        header_len += snprintf(header_buffer + header_len, sizeof(header_buffer) - header_len,
+                               "Content-Type: %s\r\n", resp->content_type);
     }
 
-    return SUCCESS_RESPONSE;
+    if (resp->content_encoding != NULL) {
+        header_len += snprintf(header_buffer + header_len, sizeof(header_buffer) - header_len,
+                           "Content-Encoding: %s\r\n", resp->content_encoding);
+    }
+
+    if (resp->content_length > 0) {
+        header_len += snprintf(header_buffer + header_len, sizeof(header_buffer) - header_len,
+                               "Content-Length: %d\r\n", resp->content_length);
+    }
+
+    // End headers with CRLF
+    header_len += snprintf(header_buffer + header_len, sizeof(header_buffer) - header_len,
+                            "\r\n");
+                            
+    // Allocate space for headers + body
+    size_t total_size = header_len + resp->content_length;
+    char *response = malloc(total_size + 1); // +1 for safety NUL
+    if (!response) {
+        perror("malloc");
+        return NULL;  
+    }
+
+    *body_len = total_size;
+    
+    // Copy headers
+    memcpy(response, header_buffer, header_len);
+    // Copy body (may contain nulls or binary data)
+    memcpy(response + header_len, resp->content, resp->content_length);
+    // Null terminate (only for debugging/logging, not required by HTTP)
+    response[total_size] = '\0';
+    // Debug info
+    printf("Built response headers:\n%.*s", header_len, response);
+    printf("Body length: %zu bytes\n", resp->content_length);
+    return response;
+}
+
+void
+check_compression(Response *resp, Request *req) {
+    if (req && req->headers && req->headers->accept_encoding) {
+        String encoding = req->headers->accept_encoding;
+        
+        if (strstr(encoding, GZIP) != NULL) {
+            resp->content_encoding = GZIP;
+            char *compressed_output = NULL;
+            int compressed_len = 0;
+            compress_string_gzip(resp->content, &compressed_output, &compressed_len);
+            if (compressed_output) {
+                //free(resp->content); // Free original content
+                resp->content = compressed_output;
+                resp->content_length = compressed_len;
+            } else {
+                // Handle compression error if needed
+                printf("Compression failed, sending uncompressed data\n");
+            }
+        }
+    }
 }
