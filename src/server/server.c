@@ -28,7 +28,7 @@ server(void *arg)
 		char *resp_buf;
 		char buf[BUFSIZ];
 		int bytes_read;
-		char SUCCESS_RESPONSE[100] = "HTTP/1.1 200 OK\r\n\r\n";
+		memset(buf, 0, BUFSIZ);
 
 		if ((bytes_read = read(args->client_fd, buf, BUFSIZ-1)) < 0 ) {
 			printf("Socket Read Error: %s \n", strerror(errno));
@@ -105,8 +105,13 @@ server(void *arg)
             // send 4xx response
             send(args->client_fd, response->content, strlen(response->content), 0);
         }
-		close(args->client_fd);
-
+		//close(args->client_fd);
+		// keep server running for other requests
+		printf("closing client connection\n");
+		//close(args->client_fd);
+		free(args);
+		free(resp_buf);
 		free_request(request);
-
+		// keep server running for other requests
+		return NULL;
 }
