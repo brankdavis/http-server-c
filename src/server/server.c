@@ -105,7 +105,7 @@ server(void *arg)
             // send 4xx response
             send(args->client_fd, response->content, strlen(response->content), 0);
         }
-		//close(args->client_fd);
+		close(args->client_fd);
 
 		free_request(request);
 
