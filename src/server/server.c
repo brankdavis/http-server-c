@@ -99,7 +99,7 @@ server(void *arg)
 		}
 		else if (response->code == SERVER_ERROR) {
 			printf("server error;\n");
-			close(args->server_fd);
+			//close(args->server_fd);
 		}
         else {
             // send 4xx response

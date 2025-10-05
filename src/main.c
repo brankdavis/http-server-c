@@ -78,7 +78,7 @@ main()
 
 		if (pthread_create(&thread, NULL, server, args) != 0) {
 			printf("Thread error %s \n", strerror(errno));
-			close(client_fd);
+			//close(client_fd);
 			return 1;
 		}
 
