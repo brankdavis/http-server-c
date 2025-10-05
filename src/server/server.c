@@ -107,11 +107,11 @@ server(void *arg)
         }
 		//close(args->client_fd);
 		// keep server running for other requests
-		printf("closing client connection\n");
+		//printf("closing client connection\n");
 		//close(args->client_fd);
 		free(args);
 		free(resp_buf);
 		free_request(request);
 		// keep server running for other requests
-		return NULL;
+		//return NULL;
 }

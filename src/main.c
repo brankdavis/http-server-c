@@ -45,18 +45,28 @@ main()
 		return 1;
 	}
 	
-	// listen for connection requests , 5 conection requests ALLOWED
-	int connection_backlog = 5;
-	if (listen(server_fd, connection_backlog) != 0) {
-		printf("Listen failed: %s \n", strerror(errno));
-		return 1;
-	}
+	// // listen for connection requests , 5 conection requests ALLOWED
+	// int connection_backlog = 5;
+	// if (listen(server_fd, connection_backlog) != 0) {
+	// 	printf("Listen failed: %s \n", strerror(errno));
+	// 	return 1;
+	// }
 	
-	printf("Waiting for a client to connect...\n");
-	client_addr_len = sizeof(client_addr);
+	// printf("Waiting for a client to connect...\n");
+	// client_addr_len = sizeof(client_addr);
 
 
 	while(1) {
+
+		// listen for connection requests , 5 conection requests ALLOWED
+		int connection_backlog = 5;
+		if (listen(server_fd, connection_backlog) != 0) {
+			printf("Listen failed: %s \n", strerror(errno));
+			return 1;
+		}
+		
+		printf("Waiting for a client to connect...\n");
+		client_addr_len = sizeof(client_addr);
 
 		// accept
 		if( (client_fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_addr_len)) < 0 ) {
